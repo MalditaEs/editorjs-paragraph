@@ -99,6 +99,7 @@ export default class Paragraph {
             text: data.text || '',
             alignment: data.alignment || config.defaultAlignment || Paragraph.DEFAULT_ALIGNMENT
         };
+
         this._tunesButtons = [
             {
                 name: 'left',
@@ -113,8 +114,15 @@ export default class Paragraph {
                 icon: require('./tune-right-icon.svg').default
             }
         ];
+
+        this._tunesButtons.push({
+            name: 'background',
+            icon: '🎨', // Representing the paint bucket with an emoji for simplicity
+        });
+
         this._element = this.drawView();
         this._preserveBlank = config.preserveBlank !== undefined ? config.preserveBlank : false;
+        this._data.backgroundColor = data.backgroundColor || '';
 
         this.data = data;
     }
@@ -190,29 +198,59 @@ export default class Paragraph {
     /**
      * Renders tunes buttons
      */
-    renderSettings() {
-        const wrapper = document.createElement('div');
-        this._tunesButtons.map(tune => {
-            const button = document.createElement('div');
-            button.classList.add('cdx-settings-button');
-            button.innerHTML = tune.icon;
-            // if we pass default alignment on config tool, it must display activated because
-            // isn't the default lifecycle
-            button.classList.toggle(this._CSS.settingsButtonActive, tune.name === (this.data.alignment || this.config.defaultAlignment));
-            wrapper.appendChild(button);
-            return button;
-        }).forEach((element, index, elements) => {
-            element.addEventListener('click', () => {
-                this._toggleTune(this._tunesButtons[index].name);
-                elements.forEach((el, i) => {
-                    const {name} = this._tunesButtons[i];
-                    el.classList.toggle(this._CSS.settingsButtonActive, name === this.data.alignment);
-                    this._element.classList.toggle(this._CSS.alignment[name], name === this.data.alignment)
-                });
-            });
+   renderSettings() {
+    const wrapper = document.createElement('div');
+    this._tunesButtons.map(tune => {
+      const button = document.createElement('div');
+      button.classList.add('cdx-settings-button');
+      button.innerHTML = tune.icon;
+
+      if (tune.name === 'background') {
+        const colorPicker = document.createElement('input');
+        colorPicker.type = 'color';
+        colorPicker.style.display = 'none';
+        colorPicker.value = this.data.backgroundColor || '#ffffff';
+
+        button.appendChild(colorPicker);
+
+        colorPicker.addEventListener('change', (event) => {
+          this._element.style.backgroundColor = event.target.value;
+          this.data.backgroundColor = event.target.value;
         });
 
-        return wrapper;
+        button.addEventListener('click', () => {
+          colorPicker.click(); // Programmatically trigger the color picker
+        });
+      } else {
+        button.classList.toggle(this._CSS.settingsButtonActive, tune.name === (this.data.alignment || this.config.defaultAlignment));
+      }
+
+      wrapper.appendChild(button);
+      return button;
+    }).forEach((element, index, elements) => {
+      if (this._tunesButtons[index].name !== 'background') {
+        element.addEventListener('click', () => {
+          this._toggleTune(this._tunesButtons[index].name);
+          elements.forEach((el, i) => {
+            const {name} = this._tunesButtons[i];
+            el.classList.toggle(this._CSS.settingsButtonActive, name === this.data.alignment);
+            this._element.classList.toggle(this._CSS.alignment[name], name === this.data.alignment);
+          });
+        });
+      }
+    });
+
+    return wrapper;
+  }
+
+    _toggleBackgroundColor() {
+        if (this.data.backgroundColor) {
+            this.data.backgroundColor = '';
+            this._element.style.backgroundColor = 'transparent';
+        } else {
+            this.data.backgroundColor = 'yellow'; // Default background color. You can customize this.
+            this._element.style.backgroundColor = this.data.backgroundColor;
+        }
     }
 
     /**
@@ -242,6 +280,7 @@ export default class Paragraph {
         return {
             text: toolsContent.innerHTML,
             alignment: this.data.alignment,
+            backgroundColor: this.data.backgroundColor // Save background color
         };
     }
 
@@ -317,6 +356,11 @@ export default class Paragraph {
         this._data = data || {};
 
         if (this._element !== null) {
+            if (this._data.backgroundColor) {
+                this._element.style.backgroundColor = this._data.backgroundColor;
+            } else {
+                this._element.style.backgroundColor = 'transparent';
+            }
             this.hydrate();
         }
     }
@@ -352,8 +396,8 @@ export default class Paragraph {
      */
     static get pasteConfig() {
         return {
-      tags: [ 'P' ],
-    };
+            tags: ['P'],
+        };
     }
 
     /**
