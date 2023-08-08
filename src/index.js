@@ -117,12 +117,20 @@ export default class Paragraph {
 
         this._tunesButtons.push({
             name: 'background',
-            icon: '🎨', // Representing the paint bucket with an emoji for simplicity
+            icon: '🎨',
         });
 
+        this._tunesButtons.push({
+            name: 'padding',
+            icon: '⬜',
+        });
+
+
         this._element = this.drawView();
+
         this._preserveBlank = config.preserveBlank !== undefined ? config.preserveBlank : false;
         this._data.backgroundColor = data.backgroundColor || '';
+        this._data.padding = data.padding || '0';
 
         this.data = data;
     }
@@ -198,50 +206,77 @@ export default class Paragraph {
     /**
      * Renders tunes buttons
      */
-   renderSettings() {
-    const wrapper = document.createElement('div');
-    this._tunesButtons.map(tune => {
-      const button = document.createElement('div');
-      button.classList.add('cdx-settings-button');
-      button.innerHTML = tune.icon;
+    renderSettings() {
 
-      if (tune.name === 'background') {
-        const colorPicker = document.createElement('input');
-        colorPicker.type = 'color';
-        colorPicker.style.display = 'none';
-        colorPicker.value = this.data.backgroundColor || '#ffffff';
+        const wrapper = document.createElement('div');
+        this._tunesButtons.map(tune => {
+            const button = document.createElement('div');
+            button.classList.add('cdx-settings-button');
+            button.innerHTML = tune.icon;
 
-        button.appendChild(colorPicker);
+            if (tune.name === 'background') {
+                const colorPicker = document.createElement('input');
+                colorPicker.type = 'color';
+                colorPicker.style.display = 'none';
+                colorPicker.value = this.data.backgroundColor || '#ffffff';
 
-        colorPicker.addEventListener('change', (event) => {
-          this._element.style.backgroundColor = event.target.value;
-          this.data.backgroundColor = event.target.value;
+                button.appendChild(colorPicker);
+
+                colorPicker.addEventListener('change', (event) => {
+                    this._element.style.backgroundColor = event.target.value;
+                    this.data.backgroundColor = event.target.value;
+                });
+
+                button.addEventListener('click', () => {
+                    colorPicker.click(); // Programmatically trigger the color picker
+                });
+            } else if (tune.name === 'padding') {
+                const paddingControlPanel = document.createElement('div');
+                paddingControlPanel.style.display = 'none';  // Initially hidden
+
+                const paddingSlider = document.createElement('input');
+                paddingSlider.type = 'range';
+                paddingSlider.min = '0';
+                paddingSlider.max = '50';
+                paddingSlider.value = this.data.padding;
+
+                paddingSlider.addEventListener('input', (event) => {
+                    const paddingValue = event.target.value + 'px';
+                    this._element.style.padding = paddingValue;
+                    this.data.padding = paddingValue;
+                });
+
+                paddingControlPanel.appendChild(paddingSlider);
+                button.appendChild(paddingControlPanel);
+
+                button.addEventListener('click', () => {
+                    // Toggle the visibility of the control panel on button click
+                    paddingControlPanel.style.display = paddingControlPanel.style.display === 'none' ? 'block' : 'none';
+                });
+
+            } else {
+                button.classList.toggle(this._CSS.settingsButtonActive, tune.name === (this.data.alignment || this.config.defaultAlignment));
+            }
+
+            wrapper.appendChild(button);
+            return button;
+        }).forEach((element, index, elements) => {
+
+            // Existing button logic for alignment tunes
+            if (!['background', 'padding'].includes(this._tunesButtons[index].name)) {
+                element.addEventListener('click', () => {
+                    this._toggleTune(this._tunesButtons[index].name);
+                    elements.forEach((el, i) => {
+                        const {name} = this._tunesButtons[i];
+                        el.classList.toggle(this._CSS.settingsButtonActive, name === this.data.alignment);
+                        this._element.classList.toggle(this._CSS.alignment[name], name === this.data.alignment);
+                    });
+                });
+            }
         });
 
-        button.addEventListener('click', () => {
-          colorPicker.click(); // Programmatically trigger the color picker
-        });
-      } else {
-        button.classList.toggle(this._CSS.settingsButtonActive, tune.name === (this.data.alignment || this.config.defaultAlignment));
-      }
-
-      wrapper.appendChild(button);
-      return button;
-    }).forEach((element, index, elements) => {
-      if (this._tunesButtons[index].name !== 'background') {
-        element.addEventListener('click', () => {
-          this._toggleTune(this._tunesButtons[index].name);
-          elements.forEach((el, i) => {
-            const {name} = this._tunesButtons[i];
-            el.classList.toggle(this._CSS.settingsButtonActive, name === this.data.alignment);
-            this._element.classList.toggle(this._CSS.alignment[name], name === this.data.alignment);
-          });
-        });
-      }
-    });
-
-    return wrapper;
-  }
+        return wrapper;
+    }
 
     _toggleBackgroundColor() {
         if (this.data.backgroundColor) {
